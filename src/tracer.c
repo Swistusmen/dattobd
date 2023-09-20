@@ -1968,14 +1968,23 @@ error:
  *
  * @dev: The &struct snap_device object pointer.
  * @cache_size: Limits the size of the COW section cache (in bytes).
+ * @fallocate_space: maximum size of cow file on partition in bytes
  */
-void tracer_reconfigure(struct snap_device *dev, unsigned long cache_size)
+void tracer_reconfigure(struct snap_device *dev, unsigned long cache_size, unsigned long fallocate_space)
 {
         dev->sd_cache_size = cache_size;
         if (!cache_size)
                 cache_size = dattobd_cow_max_memory_default;
-        if (test_bit(ACTIVE, &dev->sd_state))
-                cow_modify_cache_size(dev->sd_cow, cache_size);
+        else{
+                if (test_bit(ACTIVE, &dev->sd_state))
+                        cow_modify_cache_size(dev->sd_cow, cache_size);
+        }
+        if(fallocate_space && test_bit(ACTIVE, &dev->sd_state)){
+                int ret=0;
+                if(!modify_fallocate_space(dev, dev->sd_cow, fallocate_space)){
+                        LOG_ERROR(ret, "changing size of maximum cow file has failed");
+                }
+        }
 }
 
 /**

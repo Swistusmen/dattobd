@@ -106,7 +106,7 @@ int dattobd_transition_snapshot(unsigned int minor, char *cow, unsigned long fal
 	return ret;
 }
 
-int dattobd_reconfigure(unsigned int minor, unsigned long cache_size){
+int dattobd_reconfigure(unsigned int minor, unsigned long cache_size, unsigned long fallocate){
 	int fd, ret;
 	struct reconfigure_params rp;
 

@@ -285,12 +285,17 @@ static int handle_reconfigure(int argc, char **argv){
 	int ret, c;
 	unsigned int minor;
 	unsigned long cache_size = 0;
+	unsigned long fallocate=   0;
 
 	//get cache size and fallocated space params, if given
 	while((c = getopt(argc, argv, "c:")) != -1){
 		switch(c){
 		case 'c':
 			ret = parse_ul(optarg, &cache_size);
+			if(ret) goto error;
+			break;
+		case 'f' :
+			ret = parse_ul(optarg, &fallocate);
 			if(ret) goto error;
 			break;
 		default:
@@ -307,7 +312,7 @@ static int handle_reconfigure(int argc, char **argv){
 	ret = parse_ui(argv[optind], &minor);
 	if(ret) goto error;
 
-	return dattobd_reconfigure(minor, cache_size);
+	return dattobd_reconfigure(minor, cache_size, fallocate);
 
 error:
 	perror("error interpreting reconfigure parameters");

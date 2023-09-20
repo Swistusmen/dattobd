@@ -246,13 +246,14 @@ error:
  * @in: The &struct reconfigure_params object pointer from user space.
  * @minor: The minor number.
  * @cache_size: A number of bytes for section cache.
+ * @fallocated_space: maximum size of cow file on partition in bytes
  *
  * Return:
  * * 0 - success.
  * * !0 - errno indicating the error.
  */
 int get_reconfigure_params(const struct reconfigure_params __user *in,
-                           unsigned int *minor, unsigned long *cache_size)
+                           unsigned int *minor, unsigned long *cache_size, unsigned long *fallocated_space)
 {
         int ret;
         struct reconfigure_params params;
@@ -269,6 +270,7 @@ int get_reconfigure_params(const struct reconfigure_params __user *in,
 
         *minor = params.minor;
         *cache_size = params.cache_size;
+        *fallocated_space = params.fallocate;
         return 0;
 
 error:

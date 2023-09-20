@@ -64,6 +64,8 @@ void file_close(struct file *f);
 
 int file_open(const char *filename, int flags, struct file **filp);
 
+int file_rename(const char* old_path, const char* new path);
+
 #if !defined(HAVE___DENTRY_PATH) && !defined(HAVE_DENTRY_PATH_RAW)
 int dentry_get_relative_pathname(struct dentry *dentry, char **buf,
                                  int *len_res);

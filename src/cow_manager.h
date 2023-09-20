@@ -87,6 +87,8 @@ int cow_truncate_to_index(struct cow_manager *cm);
 
 void cow_modify_cache_size(struct cow_manager *cm, unsigned long cache_size);
 
+int modify_fallocate_space(struct* snap_device dev, struct cow_manager *cm, unsigned long cache_size);
+
 int cow_read_mapping(struct cow_manager *cm, uint64_t pos, uint64_t *out);
 
 int cow_write_current(struct cow_manager *cm, uint64_t block, void *buf);

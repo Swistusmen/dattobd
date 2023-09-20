@@ -43,6 +43,7 @@ struct transition_snap_params {
 
 struct reconfigure_params {
         unsigned long cache_size; // maximum cache size (in bytes)
+        unsigned long fallocate; // maximum fallocate (in bytes)
         unsigned int minor; // requested minor number of the device
 };
 

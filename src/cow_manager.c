@@ -764,6 +764,107 @@ void cow_modify_cache_size(struct cow_manager *cm, unsigned long cache_size)
                 __cow_calculate_allowed_sects(cache_size, cm->total_sects);
 }
 
+/*
+*  modify_fallocate_space()- modifies fallocated space
+*/
+int modify_fallocate_space(struct snap_device* dev, struct cow_manager *cm, unsigned long fallocated_space)
+{
+        int ret=0;
+        uint64_t max_file_size =fallocated_space * (1024 * 1024);
+        if(max_file_size<fallocated_space){
+                ret=22;
+                LOG_ERROR(ret, "given fallocated space is smaller than current one");
+                return ret;
+        }
+
+        char* file_path=NULL;
+        int new_path_length;
+        char original_cow_file_number;
+        ret=file_get_absolute_pathname(cm->flip, &file_path, &new_path_length);
+        if(ret!=0){
+               LOG_ERROR(ret, "cannot read cow file absolute path");
+               return ret; 
+        }
+        char* new_file_path=strcpy(file_path,new_file_path);
+        if(isDigit(new_file_path[new_path_length-1])){
+                original_cow_file_number=new_file_path[new_path_length - 1];
+                new_file_path[new_path_length - 1] = '9';
+        }else{
+                strcat(new_file_path, "9");
+        }
+
+        LOG_DEBUG("creating cow file");
+        struct file* new_flip;
+        ret = file_open(new_file_path, O_CREAT | O_TRUNC, new_flip);
+        if(ret){
+                LOG_DEBUG("could not create new cow file");
+                goto dealocate_new_file;
+        }
+
+        LOG_DEBUG("allocating cow file");
+        ret = file_allocate(new_file_path, 0, max_file_size);
+        if (ret){
+                LOG_DEBUG("could not allocate new cow file");
+                goto dealocate_new_file;
+        }
+
+        uint64_t size;
+        if (bdev_whole(dev->sd_base_dev) != dev->sd_base_dev) {
+                size = SECTOR_TO_BLOCK(dattobd_bdev_size(dev->sd_base_dev));
+        } else {
+                size = SECTOR_TO_BLOCK(get_capacity(dev->sd_base_dev->bd_disk));
+        }
+        //reinitializing basic variables- these values should be assigned to cow_manager at the end of this function if copying will succeed
+        unsigned long total_sects =NUM_SEGMENTS(size, cm->log_sect_pages + PAGE_SHIFT - 3);
+        unsigned long allowed_sects =__cow_calculate_allowed_sects(cache_size, cm->total_sects);
+        uint64_t data_offset = COW_HEADER_SIZE + (cm->total_sects * (sect_size * 8));
+
+        struct file *source_file;
+        ret=file_open(file_path, O_RDONLY, source_file);
+        if(ret){
+                LOG_DEBUG("Could not open cow file");
+                goto dealocate_new_file;
+        }
+        char buffer[1024];
+        ssize_t bytes_read, bytes_written;
+        while ((bytes_read = file_read(source_file, buffer, sizeof(buffer), &source_file->f_pos)) > 0) {
+                bytes_written = file_write(new_flip, buffer, bytes_read, &dest_file->f_pos);
+                if (bytes_written != bytes_read) {
+                        filp_close(source_file, NULL);
+                        ret=EFAULT;
+                        goto dealocate_new_file;
+                }
+        }
+        LOG_DEBUG("Copying cow file has suceeded");
+        filp_close(source_file, NULL);
+
+        char* file_path_buffer=*file_path;
+        strcat(*file_path_buffer,"buffer");
+        ret=file_rename(*file_path,*file_path_buffer);
+        if(ret){
+                goto dealocate_new_file;
+        }
+        ret=file_rename(*new_file_path,*file_path);
+        if(ret){
+                goto dealocate_new_file;
+        }
+        if (cm->filp)
+                file_unlink_and_close(cm->filp);
+
+        cm->filp=new_flip;
+        cm->file_max=max_file_size;
+        cm->total_sects=total_sects;
+        cm->allocated_sects=allowed_sects;
+        cm->data_offset=data_offset;        
+        filp_close(cm->filp, NULL);
+        LOG_DEBUG("new cow file with extended size has been created succesfully");
+        //TODO: dodac informowanie o zmianie rozmiaru pliku
+        return 0;
+
+dealocate_new_file:
+        file_unlink_and_close(new_flip);
+}
+
 /**
  * cow_read_mapping() - Loads a section into &struct cow_manager cache.  If
  * the newly loaded section exceeds the number of allowed sections then the

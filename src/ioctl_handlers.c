@@ -355,12 +355,13 @@ error:
  *                       value.
  * @minor: An allocated device minor number.
  * @cache_size: The specific amount of RAM to use for cache, default otherwise.
+ * @fallocated_space: maximum size of cow file in bytes
  *
  * Return:
  * * 0 - successful.
  * * !0 - errno indicating the error.
  */
-int ioctl_reconfigure(unsigned int minor, unsigned long cache_size)
+int ioctl_reconfigure(unsigned int minor, unsigned long cache_size, unsigned long fallocated_space)
 {
         int ret;
         struct snap_device *dev;
@@ -553,11 +554,11 @@ long ctrl_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
                 // get params from user space
                 ret = get_reconfigure_params(
                         (struct reconfigure_params __user *)arg, &minor,
-                        &cache_size);
+                        &cache_size, &fallocated_space);
                 if (ret)
                         break;
 
-                ret = ioctl_reconfigure(minor, cache_size);
+                ret = ioctl_reconfigure(minor, cache_size, fallocated_space);
                 if (ret)
                         break;
 

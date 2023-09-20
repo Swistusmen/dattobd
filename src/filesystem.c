@@ -221,6 +221,46 @@ error:
         return ret;
 }
 
+/**
+ * file_rename() - Renames a file.
+ *
+ * @old_path_name: Old name
+ * @new_path_name: New name
+ *
+ * Return:
+ * * 0 - success
+ * * !0 - errno indicating the error.
+ */
+int file_rename(const char* old_path_name, const char* new_path_name)
+{
+        struct path old_path, new_path;
+        int ret=0;
+
+        ret = kern_path(*old_path_name, 0, &old_path);
+        if (ret) {
+                LOG_ERROR(ret, "Unable to get access to the path");
+                return ret;
+        }
+
+        ret = kern_path(*new_path_name, 0, &new_path);
+        if (ret) {
+                LOG_ERROR(ret, "Unable to get access to the path");
+                path_put(&old_path);
+                return ret;
+        }
+
+        ret = vfs_rename(old_path.dentry->d_parent, old_path.dentry,
+                        new_path.dentry->d_parent, new_path.dentry, NULL, 0);
+        if (ret) {
+                LOG_ERROR(ret, "Unable rename the file");
+        }
+
+        path_put(&old_path);
+        path_put(&new_path);
+
+        return ret;
+}
+
 #if !defined(HAVE___DENTRY_PATH) && !defined(HAVE_DENTRY_PATH_RAW)
 /**
  * dentry_get_relative_pathname() - Returns the pathname of the supplied dentry
