@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 /*
- * Copyright (C) 2015-2023 Datto Inc.
+ * Copyright (C) 2015 Datto Inc.
  */
-
-#ifndef DATTOBD_INCLUDES_H_
-#define DATTOBD_INCLUDES_H_
 
 #include <asm/div64.h>
 #include <linux/blkdev.h>
@@ -25,4 +22,8 @@
 #include <linux/vmalloc.h>
 #include <linux/sched.h>
 
-#endif
+MODULE_LICENSE("GPL");
+
+static inline void dummy(void){
+	struct nameidata nd;
+}

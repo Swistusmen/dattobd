@@ -55,22 +55,22 @@ static int snap_release(struct inode *inode, struct file *filp)
 #elif defined HAVE_BDOPS_OPEN_INT
 //#elif LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 
-static int snap_open(struct block_device *bdev, fmode_t mode)
+static int snap_open(struct block_device *bdev, blk_mode_t mode)
 {
         return __tracer_open(bdev->bd_disk->private_data);
 }
 
-static int snap_release(struct gendisk *gd, fmode_t mode)
+static int snap_release(struct gendisk *gd)
 {
         return __tracer_close(gd->private_data);
 }
 #else
-static int snap_open(struct block_device *bdev, fmode_t mode)
+static int snap_open(struct gendisk *bdev, blk_mode_t mode)
 {
-        return __tracer_open(bdev->bd_disk->private_data);
+        return __tracer_open(bdev->private_data);
 }
 
-static void snap_release(struct gendisk *gd, fmode_t mode)
+static void snap_release(struct gendisk *gd)
 {
         __tracer_close(gd->private_data);
 }
