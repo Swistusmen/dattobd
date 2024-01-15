@@ -77,7 +77,7 @@ fail:
  * ERR_PTR().
  */
 struct block_device *blkdev_get_by_path(const char *pathname, fmode_t mode,
-                                        void *holder, const struct blk_holder_ops *hops)
+                                        void *holder)
 {
         struct block_device *bdev;
         bdev = dattobd_lookup_bdev(pathname, mode);
