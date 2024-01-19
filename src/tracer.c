@@ -997,15 +997,20 @@ static int __tracer_setup_snap(struct snap_device *dev, unsigned int minor,
         LOG_DEBUG("allocating queue"); 
 #ifdef HAVE_BLK_ALLOC_QUEUE_1
         //#if LINUX_VERSION_CODE < KERNEL_VERSION(5,7,0)
+        LOG_DEBUG("1");
         dev->sd_queue = blk_alloc_queue(GFP_KERNEL);
 #elif defined HAVE_BLK_ALLOC_QUEUE_RH_2 // el8
+        LOG_DEBUG("2");
         dev->sd_queue = blk_alloc_queue_rh(snap_mrf, NUMA_NO_NODE);
 #elif defined HAVE_BLK_ALLOC_QUEUE_2
+        LOG_DEBUG("3");
         dev->sd_queue = blk_alloc_queue(snap_mrf, NUMA_NO_NODE);
 #elif !defined HAVE_BLK_ALLOC_DISK
         //#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0)
+        LOG_DEBUG("4");
         dev->sd_queue = blk_alloc_queue(NUMA_NO_NODE);
 #else
+        LOG_DEBUG("5");
         dev->sd_queue = dev->sd_gd->queue;
 #endif
 
