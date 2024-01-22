@@ -1018,13 +1018,6 @@ static int __tracer_setup_snap(struct snap_device *dev, unsigned int minor,
                 goto error;
         }
 
-        // allocate a gendisk struct
-        LOG_DEBUG("allocating gendisk");
-#ifdef HAVE_BLK_ALLOC_DISK
-        dev->sd_gd = blk_alloc_disk(NUMA_NO_NODE);
-#else
-        dev->sd_gd = alloc_disk(1);
-#endif
         if (!dev->sd_gd) {
                 ret = -ENOMEM;
                 LOG_ERROR(ret, "error allocating gendisk");
@@ -1033,19 +1026,8 @@ static int __tracer_setup_snap(struct snap_device *dev, unsigned int minor,
 
         // allocate request queue
         LOG_DEBUG("allocating queue");
-#ifdef HAVE_BLK_ALLOC_QUEUE_1
-        // #if LINUX_VERSION_CODE < KERNEL_VERSION(5,7,0)
         dev->sd_queue = blk_alloc_queue(GFP_KERNEL);
-#elif defined HAVE_BLK_ALLOC_QUEUE_RH_2 // el8
-        dev->sd_queue = blk_alloc_queue_rh(snap_mrf, NUMA_NO_NODE);
-#elif defined HAVE_BLK_ALLOC_QUEUE_2
-        dev->sd_queue = blk_alloc_queue(snap_mrf, NUMA_NO_NODE);
-#elif !defined HAVE_BLK_ALLOC_DISK
-        // #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0)
-        dev->sd_queue = blk_alloc_queue(NUMA_NO_NODE);
-#else
-        dev->sd_queue = dev->sd_gd->queue;
-#endif
+
 
         if (!dev->sd_queue) {
                 ret = -ENOMEM;
@@ -1069,6 +1051,13 @@ static int __tracer_setup_snap(struct snap_device *dev, unsigned int minor,
         // use a thin wrapper around the base device's merge_bvec_fn
         if (bdev_get_queue(bdev)->merge_bvec_fn)
                 blk_queue_merge_bvec(dev->sd_queue, snap_merge_bvec);
+#endif
+        // allocate a gendisk struct
+        LOG_DEBUG("allocating gendisk");
+#ifdef HAVE_BLK_ALLOC_DISK
+        dev->sd_gd = blk_alloc_disk(NUMA_NO_NODE);
+#else
+        dev->sd_gd = alloc_disk(1);
 #endif
 
         // initialize gendisk and request queue values
