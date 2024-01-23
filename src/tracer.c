@@ -1018,12 +1018,6 @@ static int __tracer_setup_snap(struct snap_device *dev, unsigned int minor,
                 goto error;
         }
 
-        if (!dev->sd_gd) {
-                ret = -ENOMEM;
-                LOG_ERROR(ret, "error allocating gendisk");
-                goto error;
-        }
-
         // allocate request queue
         LOG_DEBUG("allocating queue");
         dev->sd_queue = blk_alloc_queue(GFP_KERNEL);
@@ -1059,6 +1053,12 @@ static int __tracer_setup_snap(struct snap_device *dev, unsigned int minor,
 #else
         dev->sd_gd = alloc_disk(1);
 #endif
+
+        if (!dev->sd_gd) {
+                ret = -ENOMEM;
+                LOG_ERROR(ret, "error allocating gendisk");
+                goto error;
+        }
 
         // initialize gendisk and request queue values
         LOG_DEBUG("initializing gendisk");
