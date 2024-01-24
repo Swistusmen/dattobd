@@ -6,7 +6,7 @@
 
 #include "blkdev.h"
 
-#ifndef HAVE_BLKDEV_GET_BY_PATH
+#if !defined HAVE_BLKDEV_GET_BY_PATH && !defined HAVE_BLKDEV_WITH_HOLDER_OPS
 
 /**
  * dattobd_lookup_bdev() - Looks up the inode associated with the path, verifies
@@ -20,7 +20,7 @@
  * On success the @block_device structure otherwise an error created via
  * ERR_PTR().
  */
- /*
+ 
 static struct block_device *dattobd_lookup_bdev(const char *pathname,
                                                 fmode_t mode)
 {
@@ -58,10 +58,10 @@ fail:
         retbd = ERR_PTR(r);
         goto out;
 }
-*/
+
 #endif
 
-#ifndef HAVE_BLKDEV_GET_BY_PATH
+#if !defined HAVE_BLKDEV_GET_BY_PATH && !defined HAVE_BLKDEV_WITH_HOLDER_OPS
 //#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38)
 
 /**
@@ -77,6 +77,24 @@ fail:
  * On success the @block_device structure otherwise an error created via
  * ERR_PTR().
  */
- 
+ struct block_device *blkdev_get_by_path(const char *pathname, fmode_t mode,
+                                        void *holder, const struct blk_holder_ops *hops)
+{
+        struct block_device *bdev;
+        bdev = dattobd_lookup_bdev(pathname, mode);
+        if (IS_ERR(bdev))
+                return bdev;
+
+        if ((mode & FMODE_WRITE) && bdev_read_only(bdev)) {
+#ifdef HAVE_BLKDEV_PUT_1
+                blkdev_put(bdev);
+#else
+                blkdev_put(bdev, mode);
+#endif
+                return ERR_PTR(-EACCES);
+        }
+
+        return bdev;
+}
 
 #endif
