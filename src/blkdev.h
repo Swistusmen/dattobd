@@ -49,4 +49,10 @@ struct block_device *blkdev_get_by_path(const char *pathname, fmode_t mode,
 #define dattobd_drop_super(sb) drop_super(sb)
 #endif
 
+#ifdef HAVE_BLKDEV_WITH_HOLDER_OPS
+#define dattobd_blkdev_get_by_path(path,mode,holder) blkdev_get_by_path(path,mode,holder,NULL)
+#else
+#define dattobd_blkdev_get_by_path(path,mode,holder) blkdev_get_by_path(path,mode,holder)
+#endif
+
 #endif /* BLKDEV_H_ */
