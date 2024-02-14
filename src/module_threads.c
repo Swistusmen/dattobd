@@ -102,9 +102,8 @@ int snap_cow_thread(void *data)
         // give this thread the highest priority we are allowed
         set_user_nice(current, MIN_NICE);
 
-        while (!kthread_should_stop() || !bio_queue_empty(bq) ||
-               atomic64_read(&dev->sd_submitted_cnt) !=
-                       atomic64_read(&dev->sd_received_cnt)) { 
+        while (!kthread_should_stop() || !bio_queue_empty(bq) || atomic64_read(&dev->sd_submitted_cnt) !=atomic64_read(&dev->sd_received_cnt))
+        { 
                 // wait for a bio to process or a kthread_stop call
                 wait_event_interruptible(bq->event,
                                          kthread_should_stop() ||
@@ -119,10 +118,13 @@ int snap_cow_thread(void *data)
                                 cow_free_members(dev->sd_cow);
                 }
 
-                int should_stop=kthread_should_stop();
-                if(should_stop){
-                        LOG_DEBUG("stopping snap thread in if");
-                        break;
+                if(kthread_should_stop()){
+                        if(bio_queue_empty(bq)){
+                                LOG_DEBUG("bio queue is empty");
+                        }
+                        int submitted_cnt=atomic64_read(&dev->sd_submitted_cnt);
+                        int received_cnt=atomic64_read(&dev->sd_received_cnt);
+                        LOG_DEBUG("submitted %d, received %d", submitted_cnt, received_cnt);
                 }
 
                 if (bio_queue_empty(bq))
