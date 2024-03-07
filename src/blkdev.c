@@ -87,6 +87,8 @@ struct block_device *blkdev_get_by_path(const char *pathname, fmode_t mode,
         if ((mode & FMODE_WRITE) && bdev_read_only(bdev)) {
 #ifdef HAVE_BLKDEV_PUT_1
                 blkdev_put(bdev);
+#elif defined HAVE_BLKDEV_PUT_2
+		blkdev_put(bdev,NULL);
 #else
                 blkdev_put(bdev, mode);
 #endif
@@ -94,5 +96,13 @@ struct block_device *blkdev_get_by_path(const char *pathname, fmode_t mode,
         }
 
         return bdev;
+}
+#endif
+
+#if !defined HAVE_BD_SUPER && !defined HAVE_GET_SUPER
+struct super_block* (*dattobd_get_active_super)(struct block_device*)= (GET_ACTIVE_SUPER_ADDR != 0) ? (struct super_block* (*)(struct block_device*))(GET_ACTIVE_SUPER_ADDR +(long long)(((void*)kfree)-(void*)KFREE_ADDR)):NULL;
+
+struct super_block* get_active_superblock(struct block_device* bdev){
+	return dattobd_get_active_super(bdev);
 }
 #endif

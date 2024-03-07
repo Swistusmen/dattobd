@@ -100,14 +100,17 @@ int __verify_bdev_writable(const char *bdev_path, int *out)
         struct super_block *sb;
 
         // open the base block device
+        LOG_DEBUG("ENTER verify_bdev_writable");
         bdev = dattobd_blkdev_get_by_path(bdev_path, FMODE_READ, NULL);
-
+        LOG_DEBUG("block_device path %s", bdev_path);
+	LOG_DEBUG("block_device %p",bdev);
         if (IS_ERR(bdev)) {
                 *out = 0;
                 return PTR_ERR(bdev);
         }
 
         sb = dattobd_get_super(bdev);
+        LOG_DEBUG("super_block %p", sb);
         if (sb) {
                 writable = !(sb->s_flags & MS_RDONLY);
                 dattobd_drop_super(sb);

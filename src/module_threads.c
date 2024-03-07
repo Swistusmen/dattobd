@@ -40,9 +40,10 @@ int inc_sset_thread(void *data)
 
         // give this thread the highest priority we are allowed
         set_user_nice(current, MIN_NICE);
-
+	LOG_DEBUG("INCREMETNAL THREAD BEGIN");
         while (!kthread_should_stop() || !sset_queue_empty(sq)) {
                 // wait for a sset to process or a kthread_stop call
+                LOG_DEBUG("PROCEEDING");
                 wait_event_interruptible(sq->event,
                                          kthread_should_stop() ||
                                                  !sset_queue_empty(sq));
@@ -55,9 +56,10 @@ int inc_sset_thread(void *data)
                         if (dev->sd_cow)
                                 cow_free_members(dev->sd_cow);
                 }
-
+                LOG_DEBUG("CHECKING IF SSET_QUEUE_EMPTY");
                 if (sset_queue_empty(sq))
                         continue;
+                LOG_DEBUG("GOING FURTHER");
 
                 // safely dequeue a sset
                 sset = sset_queue_dequeue(sq);
@@ -70,6 +72,7 @@ int inc_sset_thread(void *data)
                 }
 
                 // pass the sset to the handler
+                LOG_DEBUG("PASSING TO HANDLE INC_SSET");
                 ret = inc_handle_sset(dev, sset);
                 if (ret) {
                         LOG_ERROR(ret,
@@ -80,7 +83,7 @@ int inc_sset_thread(void *data)
                 // free the sector set
                 kfree(sset);
         }
-
+	LOG_DEBUG("INCREMENTAL THREAD ENDED");
         return 0;
 }
 
@@ -117,12 +120,6 @@ int snap_cow_thread(void *data)
 
                         if (dev->sd_cow)
                                 cow_free_members(dev->sd_cow);
-                }
-
-                int should_stop=kthread_should_stop();
-                if(should_stop){
-                        LOG_DEBUG("stopping snap thread in if");
-                        break;
                 }
 
                 if (bio_queue_empty(bq))

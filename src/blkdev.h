@@ -14,6 +14,8 @@ struct block_device;
 #ifdef HAVE_BLKDEV_PUT_1
 //#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
 #define dattobd_blkdev_put(bdev) blkdev_put(bdev);
+#elif defined HAVE_BLKDEV_PUT_2
+#define dattobd_blkdev_put(bdev) blkdev_put(bdev, NULL);
 #else
 #define dattobd_blkdev_put(bdev) blkdev_put(bdev, FMODE_READ);
 #endif
@@ -52,7 +54,8 @@ struct block_device *blkdev_get_by_path(const char *path, fmode_t mode,
 #define dattobd_get_super(bdev) get_super(bdev)
 #define dattobd_drop_super(sb) drop_super(sb)
 #else 
-#define dattobd_get_super(bdev) bdev->bd_inode->i_sb;
-#define dattobd_drop_super(sb) drop_super(sb)
+struct super_block* get_active_superblock(struct block_device*);
+#define dattobd_get_super(bdev) get_active_superblock(bdev)
+#define dattobd_drop_super(sb)
 #endif
 #endif /* BLKDEV_H_ */

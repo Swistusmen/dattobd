@@ -95,19 +95,24 @@ MRF_RETURN_TYPE snap_mrf(struct request_queue *q, struct bio *bio){
 MRF_RETURN_TYPE snap_mrf(struct bio *bio){
     struct snap_device *dev = dattobd_bio_bi_disk(bio)->queue->queuedata;
 #endif
+    LOG_DEBUG("ENTER snap_mrf");
     //if a write request somehow gets sent in, discard it
     if(bio_data_dir(bio)){
+        LOG_DEBUG("1");
         dattobd_bio_endio(bio, -EOPNOTSUPP);
         MRF_RETURN(0);
     }else if(tracer_read_fail_state(dev)){
+        LOG_DEBUG("2");
         dattobd_bio_endio(bio, -EIO);
         MRF_RETURN(0);
     }else if(!test_bit(ACTIVE, &dev->sd_state)){
+        LOG_DEBUG("3");
         dattobd_bio_endio(bio, -EBUSY);
         MRF_RETURN(0);
     }
 
     //queue bio for processing by kernel thread
+    LOG_DEBUG("snap_mrf adding bio to queue");
     bio_queue_add(&dev->sd_cow_bios, bio);
 
     MRF_RETURN(0);

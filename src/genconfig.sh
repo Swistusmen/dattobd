@@ -47,7 +47,7 @@ run_one_test() {
 	local OBJ="$TEST.o"
 	local MACRO_NAME="HAVE_$(echo ${TEST} | awk '{print toupper($0)}')"
 	local PREFIX="performing configure test: $MACRO_NAME -"
-	if make -C $FEATURE_TEST_DIR OBJ=$OBJ KERNELVERSION=$KERNEL_VERSION &>/dev/null ; then
+	if make -C $FEATURE_TEST_DIR OBJ=$OBJ KERNELVERSION=$KERNEL_VERSION &> /dev/null ; then
 		echo "$PREFIX present"
 		echo "#define $MACRO_NAME" >> $OUTPUT_FILE
 	else

@@ -293,6 +293,8 @@ error:
 static int inc_make_sset(struct snap_device *dev, sector_t sect,
                          unsigned int len)
 {
+        static int counter=0;
+	LOG_DEBUG("inc_make_sset %d",counter++);
         struct sector_set *sset;
 
         // allocate sector set to hold record of change sectors
@@ -332,6 +334,8 @@ static int inc_trace_bio(struct snap_device *dev, struct bio *bio)
         sector_t start_sect = 0, end_sect = bio_sector(bio);
         bio_iter_t iter;
         bio_iter_bvec_t bvec;
+        static int counter=0;
+        LOG_DEBUG("inc_trace_bio %d",counter++);
 
 #ifdef HAVE_ENUM_REQ_OPF
         //#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0)
@@ -426,7 +430,14 @@ static int file_is_on_bdev(const struct file *file, struct block_device *bdev)
                 LOG_DEBUG("file_is_on_bdev() if(sb)");
                 LOG_DEBUG("sb name:%s, file->sb name:%s", sb->s_root->d_name.name, sb_file->s_root->d_name.name);
                 ret = ((dattobd_get_mnt(file))->mnt_sb == sb);
+                LOG_DEBUG("sb %p", sb);
+                LOG_DEBUG("mnt %p",dattobd_get_mnt(file)->mnt_sb);
+                LOG_DEBUG("block_device %p", bdev);
+                struct super_block* alt=file->f_inode->i_sb;
+                LOG_DEBUG("super_block gained alternative way %p",alt);
+                LOG_DEBUG("sb_name:%sT mnt name:%sT ret %d", sb->s_root->d_name.name, (dattobd_get_mnt(file))->mnt_sb->s_root->d_name.name,ret);
                 dattobd_drop_super(sb);
+                //ret=1;
         }
         return ret;
 }
@@ -966,7 +977,10 @@ static void __tracer_destroy_snap(struct snap_device *dev)
 #else
                 if (disk_live(dev->sd_gd))
 #endif
+{
+                LOG_DEBUG("del_gendisk");
                         del_gendisk(dev->sd_gd);
+}
                 put_disk(dev->sd_gd);
                 dev->sd_gd = NULL;
         }
@@ -976,7 +990,7 @@ static void __tracer_destroy_snap(struct snap_device *dev)
 #ifdef HAVE_BLK_CLEANUP_QUEUE
                 blk_cleanup_queue(dev->sd_queue);
 #else
-                blk_put_queue(dev->sd_queue);
+                //blk_put_queue(dev->sd_queue);
 #endif
                 dev->sd_queue = NULL;
         }
@@ -1232,13 +1246,15 @@ static int __tracer_transition_tracing(
     struct snap_device *dev,
     struct block_device *bdev,
     BIO_REQUEST_CALLBACK_FN *new_bio_tracking_ptr,
-    struct snap_device **dev_ptr)
+    struct snap_device **dev_ptr,
+    bool start)
 #else
 static int __tracer_transition_tracing(
     struct snap_device *dev,
     struct block_device *bdev,
     const struct block_device_operations *bd_ops,
-    struct snap_device **dev_ptr)
+    struct snap_device **dev_ptr,
+    bool start)
 #endif
 {
         int ret;
@@ -1304,7 +1320,7 @@ static int __tracer_transition_tracing(
 #endif
         }
         smp_wmb();
-        if(dev){
+        if(start){
                 LOG_DEBUG("starting tracing");
                 *dev_ptr = dev;
                 smp_wmb();
@@ -1315,8 +1331,12 @@ static int __tracer_transition_tracing(
                 }
 #else
                 if(bd_ops){
+                        LOG_DEBUG("Setting bdops");
                         bdev->bd_disk->fops= bd_ops;
                 }
+#ifdef HAVE_BD_HAS_SUBMIT_BIO
+        bdev->bd_has_submit_bio=true;
+#endif
 #endif
                 atomic_inc(&(*dev_ptr)->sd_active);
         } else {
@@ -1330,10 +1350,14 @@ static int __tracer_transition_tracing(
                 }
 #else
                 if(bd_ops){
+                        LOG_DEBUG("Setting bdops");
                         bdev->bd_disk->fops= bd_ops;
+#ifdef HAVE_BD_HAS_SUBMIT_BIO
+        bdev->bd_has_submit_bio=true;
+#endif
                 }
 #endif
-                *dev_ptr = dev;
+                *dev_ptr = NULL;
                 smp_wmb();
         }
         if(origsb){
@@ -1385,7 +1409,8 @@ static MRF_RETURN_TYPE tracing_fn(struct request_queue *q, struct bio *bio)
         struct snap_device *dev = NULL;
         MAYBE_UNUSED(ret);
         make_request_fn* orig_fn;
-
+	static int counter=0;
+	LOG_DEBUG("tracing_fn counter %d", counter++);
         smp_rmb();
         tracer_for_each(dev, i)
         {
@@ -1539,6 +1564,9 @@ int tracer_alloc_ops(struct snap_device* dev){
         }
         memcpy(trops->bd_ops, dattobd_get_bd_ops(dev->sd_base_dev),sizeof(struct block_device_operations));
         trops->bd_ops->submit_bio = tracing_fn;
+#ifdef HAVE_BD_HAS_SUBMIT_BIO
+        trops->has_submit_bio=true;
+#endif
         atomic_set(&trops->refs, 1);
 	dev->sd_tracing_ops = trops;
 	return 0;       
@@ -1619,27 +1647,30 @@ static void __tracer_destroy_tracing(struct snap_device *dev)
 
 #ifndef USE_BDOPS_SUBMIT_BIO
                         __tracer_transition_tracing(
-                            NULL,
+                            dev,
                             dev->sd_base_dev,
                             dev->sd_orig_request_fn,
-                            &snap_devices[dev->sd_minor]
+                            &snap_devices[dev->sd_minor],
+                            false
                         );
 #else
                         __tracer_transition_tracing(
-                            NULL,
+                            dev,
                             dev->sd_base_dev,
                             dev->bd_ops,
-                            &snap_devices[dev->sd_minor]
+                            &snap_devices[dev->sd_minor],
+                            false
                         );
 #endif
                 }
         else
         {
                 __tracer_transition_tracing(
-                        NULL,
+                        dev,
                         dev->sd_base_dev,
                         NULL,
-                        &snap_devices[dev->sd_minor]
+                        &snap_devices[dev->sd_minor],
+                        false
                 );
         }
         smp_wmb();
@@ -1706,7 +1737,8 @@ int __tracer_setup_tracing(struct snap_device *dev, unsigned int minor)
                 dev,
                 dev->sd_base_dev,
                 tracing_fn,
-                &snap_devices[minor]);
+                &snap_devices[minor],
+                true);
 #else
         if(!dev->sd_tracing_ops){
                 ret=find_orig_bdops(dev->sd_base_dev, &dev->bd_ops,&dev->sd_orig_request_fn, &dev->sd_tracing_ops);
@@ -1726,7 +1758,8 @@ int __tracer_setup_tracing(struct snap_device *dev, unsigned int minor)
                         dev,
                         dev->sd_base_dev,
                         dev->sd_tracing_ops->bd_ops,
-                        &snap_devices[minor]);
+                        &snap_devices[minor],
+                        true);
         }
 	else {
 		LOG_DEBUG("device with minor %i already has sd_tracing_ops", minor);

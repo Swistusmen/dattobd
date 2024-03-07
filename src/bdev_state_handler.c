@@ -63,11 +63,14 @@ int __handle_bdev_mount_nowrite(const struct vfsmount *mnt,
         struct snap_device *dev;
         tracer_for_each(dev, i)
         {
+        	LOG_DEBUG("tracer_for_each %d", i);
+        	
                 if (!dev || !test_bit(ACTIVE, &dev->sd_state) ||
                     tracer_read_fail_state(dev) ||
                     dev->sd_base_dev != mnt->mnt_sb->s_bdev)
                         continue;
-
+		LOG_DEBUG("mnt %p", mnt);
+		LOG_DEBUG("dattobd_get_mnt %p", dattobd_get_mnt(dev->sd_cow->filp));
                 if (mnt == dattobd_get_mnt(dev->sd_cow->filp)) {
                         LOG_DEBUG("block device umount detected for device %d",
                                   i);
