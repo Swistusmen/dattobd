@@ -13,7 +13,10 @@ struct bio_queue {
         struct bio_list bios;
         spinlock_t lock;
         wait_queue_head_t event;
+        int counter;
 };
+
+int bio_queue_get_size(struct bio_queue* bq);
 
 void bio_queue_init(struct bio_queue *bq);
 

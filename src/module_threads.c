@@ -101,7 +101,7 @@ int snap_cow_thread(void *data)
 
         // give this thread the highest priority we are allowed
         set_user_nice(current, MIN_NICE);
-
+        LOG_DEBUG("SNAP_COW START");
         while (!kthread_should_stop() || !bio_queue_empty(bq) ||
                atomic64_read(&dev->sd_submitted_cnt) !=
                        atomic64_read(&dev->sd_received_cnt)) { 
@@ -119,8 +119,22 @@ int snap_cow_thread(void *data)
                                 cow_free_members(dev->sd_cow);
                 }
 
-                if (bio_queue_empty(bq))
+                if(kthread_should_stop()){
+                        LOG_DEBUG("KTRHEAD_SHOULD_STOP");
+                        LOG_DEBUG("bq: %d", bio_queue_get_size(bq));
+                }
+
+                if(atomic64_read(&dev->sd_submitted_cnt) !=
+                       atomic64_read(&dev->sd_received_cnt)){
+                        LOG_DEBUG("COUNTS DIFFER");
+                        LOG_DEBUG("bq: %d", bio_queue_get_size(bq));
+                }
+
+                if (bio_queue_empty(bq)){
+                        LOG_DEBUG("BIO_QUEUE_EMPTY");
+                        LOG_DEBUG("bq: %d", bio_queue_get_size(bq));
                         continue;
+                }
 
                 // safely dequeue a bio
                 bio = bio_queue_dequeue_delay_read(bq);
@@ -161,6 +175,7 @@ int snap_cow_thread(void *data)
                         bio_free_clone(bio);
                 }
         }
+        LOG_DEBUG("SNAP_COW STOP");
 
         return 0;
 }

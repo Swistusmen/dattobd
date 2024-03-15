@@ -9,6 +9,11 @@
 #include "bio_queue.h"
 #include "bio_helper.h"
 
+int bio_queue_get_size(struct bio_queue* bq)
+{
+        return bq->counter;
+}
+
 /**
  * bio_queue_init() - Prepares a queue for use.
  * @bq: The queue.
@@ -18,6 +23,7 @@ void bio_queue_init(struct bio_queue *bq)
         bio_list_init(&bq->bios);
         spin_lock_init(&bq->lock);
         init_waitqueue_head(&bq->event);
+        bq->counter=0;
 }
 
 /**
@@ -48,6 +54,7 @@ void bio_queue_add(struct bio_queue *bq, struct bio *bio)
         bio_list_add(&bq->bios, bio);
         spin_unlock_irqrestore(&bq->lock, flags);
         wake_up(&bq->event);
+        bq->counter++;
 }
 
 /**
@@ -67,7 +74,7 @@ struct bio *bio_queue_dequeue(struct bio_queue *bq)
         spin_lock_irqsave(&bq->lock, flags);
         bio = bio_list_pop(&bq->bios);
         spin_unlock_irqrestore(&bq->lock, flags);
-
+        bq->counter--;
         return bio;
 }
 
@@ -135,6 +142,7 @@ struct bio *bio_queue_dequeue_delay_read(struct bio_queue *bq)
 
 out:
         spin_unlock_irqrestore(&bq->lock, flags);
+        bq->counter--;
 
         return bio;
 }
