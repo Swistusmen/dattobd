@@ -144,35 +144,44 @@ int snap_cow_thread(void *data)
                         // if we're in the fail state just send back an IO error
                         // and free the bio
                         if (is_failed) {
+                                LOG_DEBUG("sr failed");
                                 dattobd_bio_endio(bio,
                                                   -EIO); // end the bio with an
                                                          // IO error
+                                LOG_DEBUG("sr failed-after");
                                 continue;
                         }
-
+                        LOG_DEBUG("sr before");
                         ret = snap_handle_read_bio(dev, bio);
+                        LOG_DEBUG("sr after");
                         if (ret) {
                                 LOG_ERROR(
                                         ret,
                                         "error handling read bio in kernel thread");
                                 tracer_set_fail_state(dev, ret);
                         }
-
+                        LOG_DEBUG("sr bio-endio-before");
                         dattobd_bio_endio(bio, (ret) ? -EIO : 0);
+                        LOG_DEBUG("sr bio-endio-after");
                 } else {
                         if (is_failed) {
+                                LOG_DEBUG("sw failed");
                                 bio_free_clone(bio);
+                                LOG_DEBUG("sw failed-after");
                                 continue;
                         }
 
+                        LOG_DEBUG("sw before");
                         ret = snap_handle_write_bio(dev, bio);
+                        LOG_DEBUG("sw after");
                         if (ret) {
                                 LOG_ERROR(ret, "error handling write bio in "
                                                "kernel thread");
                                 tracer_set_fail_state(dev, ret);
                         }
-
+                        LOG_DEBUG("sw bio-free-clone-before");
                         bio_free_clone(bio);
+                        LOG_DEBUG("sw bio-free-clone-after");
                 }
         }
         LOG_DEBUG("SNAP_COW STOP");
