@@ -105,11 +105,12 @@ int snap_cow_thread(void *data)
         while (!kthread_should_stop() || !bio_queue_empty(bq) ||
                atomic64_read(&dev->sd_submitted_cnt) !=
                        atomic64_read(&dev->sd_received_cnt)) { 
+                LOG_DEBUG("continuing");
                 // wait for a bio to process or a kthread_stop call
                 wait_event_interruptible(bq->event,
                                          kthread_should_stop() ||
                                                  !bio_queue_empty(bq));
-               
+                LOG_DEBUG("continuing 2");
                 if (!is_failed && tracer_read_fail_state(dev)) {
                         LOG_DEBUG(
                                 "error detected in cow thread, cleaning up cow");
@@ -167,7 +168,7 @@ int snap_cow_thread(void *data)
                         if (is_failed) {
                                 LOG_DEBUG("sw failed");
                                 bio_free_clone(bio);
-                                LOG_DEBUG("sw failed-after");
+                                LOG_DEBUG("sw failed-after"); //tutaj mi sie zatrzymalo (ostatni komunikat)
                                 continue;
                         }
 
