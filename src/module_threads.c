@@ -105,7 +105,8 @@ int snap_cow_thread(void *data)
         while (!kthread_should_stop() || !bio_queue_empty(bq) ||
                atomic64_read(&dev->sd_submitted_cnt) !=
                        atomic64_read(&dev->sd_received_cnt)) { 
-                LOG_DEBUG("continuing");
+                LOG_DEBUG("continuing"); //tutaj utyka
+                LOG_DEBUG("bq: %d", bio_queue_get_size(bq));
                 // wait for a bio to process or a kthread_stop call
                 wait_event_interruptible(bq->event,
                                          kthread_should_stop() ||
