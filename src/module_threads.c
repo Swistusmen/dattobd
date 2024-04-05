@@ -51,7 +51,7 @@ int inc_sset_thread(void *data)
                         LOG_DEBUG("kthread_should_stop");
                 }
 
-                if(sset_queue_empty()){
+                if(sset_queue_empty(sq)){
                         LOG_DEBUG("sset_queue_empty");
                 }
 
