@@ -138,7 +138,7 @@ int snap_cow_thread(void *data)
                         LOG_DEBUG("counts doesn't match");
                 }
 
-                if(!bio_queue_empty()){
+                if(!bio_queue_empty(bq)){
                         LOG_DEBUG("size %d",bio_queue_get_size(bq));
                         LOG_DEBUG("bio_queue is not empty");
                 }
