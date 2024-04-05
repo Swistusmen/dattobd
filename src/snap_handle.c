@@ -136,7 +136,9 @@ int snap_handle_read_bio(const struct snap_device *dev, struct bio *bio)
 
         // submit the bio to the base device and wait for completion
         if (mode != READ_MODE_COW_FILE) {
+                LOG_DEBUG("snap_handle_read_bio dattobd_submit_bio_wait start");
                 ret = dattobd_submit_bio_wait(bio);
+                LOG_DEBUG("snap_handle_read_bio dattobd_submit_bio_wait stop");
                 if (ret) {
                         LOG_ERROR(ret,
                                   "error reading from base device for read");
@@ -157,6 +159,7 @@ int snap_handle_read_bio(const struct snap_device *dev, struct bio *bio)
                 bio_sector(bio) = bio_orig_sect;
                 cur_sect = bio_sector(bio);
 
+                LOG_DEBUG("bio_for_each_segment_all starts");
                 // iteration which guarantes that we will have ownership of bvecs internals
 #ifdef HAVE_BVEC_ITER_ALL
                 bio_for_each_segment_all (bvec, bio, iter) {
@@ -169,7 +172,7 @@ int snap_handle_read_bio(const struct snap_device *dev, struct bio *bio)
                         cur_block = (cur_sect * SECTOR_SIZE) / COW_BLOCK_SIZE;
                         block_off = (cur_sect * SECTOR_SIZE) % COW_BLOCK_SIZE;
                         bvec_off = bvec->bv_offset;
-
+                        LOG_DEBUG("starting while");
                         while (bvec_off < bvec->bv_offset + bvec->bv_len) {
                                 bytes_to_copy = min(bvec->bv_offset + bvec->bv_len - bvec_off, COW_BLOCK_SIZE - block_off);
                                 // check if the mapping exists
@@ -201,10 +204,12 @@ int snap_handle_read_bio(const struct snap_device *dev, struct bio *bio)
                                             COW_BLOCK_SIZE;
                                 bvec_off += bytes_to_copy;
                         }
+                        LOG_DEBUG("stopping while");
 
                         // unmap the page from kernel space
                         kunmap(bvec->bv_page);
                 }
+                LOG_DEBUG("bio_for_each_segment_all stops");
         }
 
 out:
@@ -252,7 +257,7 @@ int snap_handle_write_bio(const struct snap_device *dev, struct bio *bio)
         // to be block aligned)
         const unsigned long long number_of_blocks=bio_size(bio);
         unsigned long long saved_blocks=0;
-
+        LOG_DEBUG("bio_for_each_segment_all start");
 #ifdef HAVE_BVEC_ITER_ALL
 		bio_for_each_segment_all(bvec, bio, iter) {
 #else
@@ -266,6 +271,7 @@ int snap_handle_write_bio(const struct snap_device *dev, struct bio *bio)
                 // map the page into kernel space
                 data = kmap(bvec->bv_page);
 
+                LOG_DEBUG("for starts");
                 // loop through the blocks in the page
                 for (; start_block < end_block; start_block++) {
                         // pass the block to the cow manager to be handled
@@ -277,11 +283,12 @@ int snap_handle_write_bio(const struct snap_device *dev, struct bio *bio)
                         }
                         saved_blocks++;
                 }
+                LOG_DEBUG("for stops");
 
                 // unmap the page
                 kunmap(bvec->bv_page);
         }
-
+        LOG_DEBUG("bio_for_each_segment_all stop");
         return 0;
 
 error:

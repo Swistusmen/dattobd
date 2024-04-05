@@ -40,12 +40,20 @@ int inc_sset_thread(void *data)
 
         // give this thread the highest priority we are allowed
         set_user_nice(current, MIN_NICE);
-
+        LOG_DEBUG("inc_sset_thread starts");
         while (!kthread_should_stop() || !sset_queue_empty(sq)) {
                 // wait for a sset to process or a kthread_stop call
                 wait_event_interruptible(sq->event,
                                          kthread_should_stop() ||
                                                  !sset_queue_empty(sq));
+
+                if(kthread_should_stop()){
+                        LOG_DEBUG("kthread_should_stop");
+                }
+
+                if(sset_queue_empty()){
+                        LOG_DEBUG("sset_queue_empty");
+                }
 
                 if (!is_failed && tracer_read_fail_state(dev)) {
                         LOG_DEBUG(
@@ -80,7 +88,7 @@ int inc_sset_thread(void *data)
                 // free the sector set
                 kfree(sset);
         }
-
+        LOG_DEBUG("inc_sset_thread_stops");
         return 0;
 }
 
@@ -101,7 +109,7 @@ int snap_cow_thread(void *data)
 
         // give this thread the highest priority we are allowed
         set_user_nice(current, MIN_NICE);
-
+        LOG_DEBUG("STARTING SNAP COW THREAD");
         while (!kthread_should_stop() || !bio_queue_empty(bq) ||
                atomic64_read(&dev->sd_submitted_cnt) !=
                        atomic64_read(&dev->sd_received_cnt)) { 
@@ -117,6 +125,22 @@ int snap_cow_thread(void *data)
 
                         if (dev->sd_cow)
                                 cow_free_members(dev->sd_cow);
+                }
+
+                if(kthread_should_stop()){
+                        LOG_DEBUG("size %d",bio_queue_get_size(bq));
+                        LOG_DEBUG("should stop");
+                }
+
+                if(atomic64_read(&dev->sd_submitted_cnt) !=
+                       atomic64_read(&dev->sd_received_cnt)){
+                        LOG_DEBUG("size %d",bio_queue_get_size(bq));
+                        LOG_DEBUG("counts doesn't match");
+                }
+
+                if(!bio_queue_empty()){
+                        LOG_DEBUG("size %d",bio_queue_get_size(bq));
+                        LOG_DEBUG("bio_queue is not empty");
                 }
 
                 if (bio_queue_empty(bq))
@@ -161,6 +185,7 @@ int snap_cow_thread(void *data)
                         bio_free_clone(bio);
                 }
         }
+        LOG_DEBUG("STOPPING SNAP COW THREAD");
 
         return 0;
 }
@@ -184,7 +209,7 @@ int snap_mrf_thread(void *data)
 
         // give this thread the highest priority we are allowed
         set_user_nice(current, MIN_NICE);
-
+        LOG_DEBUG("SNAP_MRF starts");
         while (!kthread_should_stop() || !bio_queue_empty(bq)) {
                 // wait for a bio to process or a kthread_stop call
                 wait_event_interruptible(bq->event,
@@ -207,6 +232,7 @@ int snap_mrf_thread(void *data)
                         generic_make_request(bio);
 #endif
         }
+        LOG_DEBUG("SNAP_MRF stops");
 
         return 0;
 }
